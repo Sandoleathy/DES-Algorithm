@@ -110,14 +110,27 @@ def inverse_permutation(permuted_text):
 # --------------------------------------------------------------------------------
 
 # 16轮次加密
-def encryption(text):
+def encryption(text, key):
     # 分成两组，每组32bit
     group = divide_data(text, 32)
     # 初始情况下直接分为左右两组
     l = group[0]
     r = group[1]
+    # 对密钥进行pc-1替换
+    pc_1_key = permuted_choice_1(key)
+    c = pc_1_key[:28]
+    d = pc_1_key[28:]
+
     for i in range(1):
         temp_r = r  # r的副本，下一个轮次的l = 本轮次r
+        if i+1 == 1 or i+1 == 2 or i+1 == 9 or i+1 == 16:
+            # 循环左移一位
+            c = c[1:] + c[:1]
+            d = d[1:] + d[:1]
+        else:
+            # 循环左移两位
+            c = c[2:] + c[:2]
+            d = d[2:] + d[:2]
         r = F_function(r, l)
         # li = r(i-1)
         l = temp_r
@@ -175,7 +188,7 @@ def __main__():
     for data in data_slides:
         binary_data = string_to_binary(data)
         permutation_data = initial_permutation(binary_data)
-        encryption(permutation_data)
+        encryption(permutation_data, key)
 
 
 __main__()
