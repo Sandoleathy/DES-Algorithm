@@ -75,7 +75,8 @@ S8 = [
     [7, 11, 4, 1, 9, 12, 14, 2, 0, 6, 10, 13, 15, 3, 5, 8],
     [2, 1, 14, 7, 4, 10, 8, 13, 15, 12, 9, 0, 3, 5, 6, 11]
 ]
-S_BOXES = [S1,S2,S3,S4,S5,S6,S7,S8]
+S_BOXES = [S1, S2, S3, S4, S5, S6, S7, S8]
+
 
 # 密钥生成部分
 def generate_key():
@@ -110,12 +111,12 @@ def generate_random_binary_key_with_parity(length):
 
 # --------------------------------------------------------------------------------
 # 切分明文
-def divide_data(data, byte):
-    groups = [data[i:i + byte] for i in range(0, len(data), byte)]
+def divide_data(data, bits):
+    groups = [data[i:i + bits] for i in range(0, len(data), bits)]
 
     # 如果最后一组不足 n 个字符，则用 padding_char 补全
-    if len(groups[-1]) < byte:
-        groups[-1] = groups[-1].ljust(byte, '0')
+    if len(groups[-1]) < bits:
+        groups[-1] = groups[-1].ljust(bits, '0')
     return groups
 
 
@@ -163,7 +164,7 @@ def inverse_permutation(permuted_text):
 # --------------------------------------------------------------------------------
 
 # 16轮次加密
-def encryption(text, key):
+def encryption_cycle(text, key):
     # 分成两组，每组32bit
     group = divide_data(text, 32)
     # 初始情况下直接分为左右两组
@@ -190,12 +191,25 @@ def encryption(text, key):
             d = d[2:] + d[:2]
             # print("循环左移两位，结果为c: ", c, ' ,d: ', d)
         child_key = permuted_choice_2(c, d)
-        F_function(r, child_key)
-        # r = F_function(r, l)
+        f_result = F_function(r, child_key)
+        # f函数的结果与l进行异或得到下一轮的r
+        next_r = ''
+        for j in range(len(f_result)):
+            if f_result[j] == l[j]:
+                next_r += '0'
+            else:
+                next_r += '1'
         # li = r(i-1)
-        # l = temp_r
+        l = temp_r
+        # r
+        r = next_r
     print("16轮迭代结束")
-    return
+    # 迭代结束后，交换l和r
+    temp_l = l
+    l = r
+    r = temp_l
+    encryption_result = l + r
+    return encryption_result
 
 
 # F函数
@@ -216,7 +230,6 @@ def F_function(r, k):
     # 使用异或结果进行S盒替换
     s_box_result = S_box_substitution(xor_result)
     f_result = P_substitution(s_box_result)
-    print(f_result)
     return f_result
 
 
@@ -225,7 +238,7 @@ def S_box_substitution(xor_result):
     # 切分成8个部分，每个部分6bit
     s_box_text = []
     for i in range(8):
-        s_box_text.append(xor_result[i*6:(i+1)*6])
+        s_box_text.append(xor_result[i * 6:(i + 1) * 6])
     s_num = 0
     s_box_result = ''
     for i in s_box_text:
@@ -242,7 +255,7 @@ def S_box_substitution(xor_result):
         decimal_result = s_table[row][column]
         # 转换为二进制
         binary_result = bin(decimal_result)
-        binary_result = binary_result[2:]   # 去掉0b开头
+        binary_result = binary_result[2:]  # 去掉0b开头
         # 如果二进制格式不足4位，则在高位补0
         while len(binary_result) < 4:
             binary_result = '0' + binary_result
@@ -327,16 +340,36 @@ def permuted_choice_2(c, d):
     return pc_2_key
 
 
+def binary_to_hex(binary_string):
+    # 先将二进制字符串转换为十进制整数
+    decimal_value = int(binary_string, 2)
+    # 再将十进制整数转换为十六进制，并去掉前缀 "0x"
+    hex_value = hex(decimal_value)[2:]
+    return hex_value
+
+
+# 加密主函数
+# 接受明文和密钥，返回加密后的二进制数据
+def encryption(plaintext, key):
+    plaintext_binary = string_to_binary(plaintext)
+    data_slides = divide_data(plaintext_binary, 64)
+    print(data_slides)
+    encryption_result = ''
+    for data in data_slides:
+        permutation_data = initial_permutation(data)
+        en_data = encryption_cycle(permutation_data, key)
+        encryption_result += en_data
+    return encryption_result
+
+
 def __main__():
     key = generate_key()
     print("密钥为：", key)
     # 分为8字节一组（64bit）
     # print("PC1置换后密钥为：", permuted_choice_1(key))
-    data_slides = divide_data("abcdefghijklmnopqrstuvwxyz", 8)
-    for data in data_slides:
-        binary_data = string_to_binary(data)
-        permutation_data = initial_permutation(binary_data)
-        encryption(permutation_data, key)
+    plaintext = "你好，我是丁真,芝士雪豹，妈妈生的"
+    en_result = encryption(plaintext, key)
+    print(binary_to_hex(en_result))
 
 
 __main__()
