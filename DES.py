@@ -75,8 +75,7 @@ S8 = [
     [7, 11, 4, 1, 9, 12, 14, 2, 0, 6, 10, 13, 15, 3, 5, 8],
     [2, 1, 14, 7, 4, 10, 8, 13, 15, 12, 9, 0, 3, 5, 6, 11]
 ]
-
-
+S_BOXES = [S1,S2,S3,S4,S5,S6,S7,S8]
 
 # 密钥生成部分
 def generate_key():
@@ -215,12 +214,40 @@ def F_function(r, k):
     xor_result = ''.join(xor_list)
     # print(xor_result)
     # 使用异或结果进行S盒替换
+    s_box_result = S_box_substitution(xor_result)
     return xor_result
 
 
 # S盒替换
 def S_box_substitution(xor_result):
-    return
+    # 切分成8个部分，每个部分6bit
+    s_box_text = []
+    for i in range(8):
+        s_box_text.append(xor_result[i*6:(i+1)*6])
+    s_num = 0
+    s_box_result = ''
+    for i in s_box_text:
+        # 选择对应的S盒
+        s_table = S_BOXES[s_num]
+        # 分组的第一位和最后一位组合成行数
+        row_binary = i[0] + i[5]
+        # 分组的中间四位组成列数
+        column_binary = i[1:5]
+        # 转化为十进制
+        row = int(row_binary, 2)
+        column = int(column_binary, 2)
+        # 选择S盒中的值
+        decimal_result = s_table[row][column]
+        # 转换为二进制
+        binary_result = bin(decimal_result)
+        binary_result = binary_result[2:]   # 去掉0b开头
+        # 如果二进制格式不足4位，则在高位补0
+        while len(binary_result) < 4:
+            binary_result = '0' + binary_result
+        # print(binary_result)
+        s_box_result += binary_result
+        s_num += 1
+    return s_box_result
 
 
 # r扩展到48位，用于执行Feistel函数
