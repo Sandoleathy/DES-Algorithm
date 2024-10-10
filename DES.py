@@ -208,9 +208,35 @@ def encryption_cycle(text, key):
     temp_l = l
     l = r
     r = temp_l
-    encryption_result = l + r
+    # 最后一步将l和r结合进行逆初始置换
+    encryption_result = inverse_permutation(l + r)
     return encryption_result
 
+
+# 在一开始就把16轮子密钥全部生成并且存储到列表中
+# 虽然降低了运行速度，但是好在加密和破译过程都可以直观的使用
+def generate_all_child_key(key):
+    # 对密钥进行pc-1替换
+    pc_1_key = permuted_choice_1(key)
+    # 切分成28bit一部分
+    c = pc_1_key[:28]
+    d = pc_1_key[28:]
+    key_list =[]
+    for i in range(16):
+        # 每轮子密钥k生成
+        if i + 1 == 1 or i + 1 == 2 or i + 1 == 9 or i + 1 == 16:
+            # 循环左移一位
+            c = c[1:] + c[:1]
+            d = d[1:] + d[:1]
+            # print("循环左移一位，结果为c: ", c, ' ,d: ', d)
+        else:
+            # 循环左移两位
+            c = c[2:] + c[:2]
+            d = d[2:] + d[:2]
+            # print("循环左移两位，结果为c: ", c, ' ,d: ', d)
+        child_key = permuted_choice_2(c, d)
+        key_list.append(child_key)
+    return key_list
 
 # F函数
 # 接收48位的子密钥和32位的R
@@ -353,13 +379,23 @@ def binary_to_hex(binary_string):
 def encryption(plaintext, key):
     plaintext_binary = string_to_binary(plaintext)
     data_slides = divide_data(plaintext_binary, 64)
-    print(data_slides)
+    # print(data_slides)
     encryption_result = ''
     for data in data_slides:
         permutation_data = initial_permutation(data)
         en_data = encryption_cycle(permutation_data, key)
         encryption_result += en_data
     return encryption_result
+
+
+# 破译主函数
+# 接收密文和密钥，返回明文
+def deciphering(ciphertext, key):
+    ciphertext_binary = string_to_binary(ciphertext)
+    data_slides = divide_data(ciphertext_binary, 64)
+    cipher_result = ''
+    for data in data_slides:
+        ip_data = initial_permutation(data)
 
 
 def __main__():
