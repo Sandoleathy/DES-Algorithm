@@ -215,7 +215,9 @@ def F_function(r, k):
     # print(xor_result)
     # 使用异或结果进行S盒替换
     s_box_result = S_box_substitution(xor_result)
-    return xor_result
+    f_result = P_substitution(s_box_result)
+    print(f_result)
+    return f_result
 
 
 # S盒替换
@@ -250,7 +252,25 @@ def S_box_substitution(xor_result):
     return s_box_result
 
 
-# r扩展到48位，用于执行Feistel函数
+# P替换
+def P_substitution(s_box_result):
+    p_table = [
+        16, 7, 20, 21,
+        29, 12, 28, 17,
+        1, 15, 23, 26,
+        5, 18, 31, 10,
+        2, 8, 24, 14,
+        32, 27, 3, 9,
+        19, 13, 30, 6,
+        22, 11, 4, 25
+    ]
+    p_result_list = []
+    for i in p_table:
+        p_result_list.append(s_box_result[i - 1])
+    return ''.join(p_result_list)
+
+
+# r扩展到48位，用于执行F函数
 def expand_r(r):
     expansion_table = [
         32, 1, 2, 3, 4, 5,
