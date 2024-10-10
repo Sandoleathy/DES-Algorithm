@@ -118,30 +118,56 @@ def encryption(text, key):
     r = group[1]
     # 对密钥进行pc-1替换
     pc_1_key = permuted_choice_1(key)
+    # 切分成28bit一部分
     c = pc_1_key[:28]
     d = pc_1_key[28:]
 
-    for i in range(1):
+    # 16轮迭代
+    for i in range(16):
         temp_r = r  # r的副本，下一个轮次的l = 本轮次r
+        # 每轮子密钥k生成
         if i+1 == 1 or i+1 == 2 or i+1 == 9 or i+1 == 16:
             # 循环左移一位
             c = c[1:] + c[:1]
             d = d[1:] + d[:1]
+            # print("循环左移一位，结果为c: ", c, ' ,d: ', d)
         else:
             # 循环左移两位
             c = c[2:] + c[:2]
             d = d[2:] + d[:2]
-        r = F_function(r, l)
+            # print("循环左移两位，结果为c: ", c, ' ,d: ', d)
+        child_key = permuted_choice_2(c, d)
+        F_function(r, child_key)
+        # r = F_function(r, l)
         # li = r(i-1)
-        l = temp_r
+        # l = temp_r
+    print("16轮迭代结束")
     return
 
 
-def F_function(r, l):
+# F函数
+# 接收48位的子密钥和32位的R
+def F_function(r, k):
     temp = expand_r(r)
     r_48 = ''.join(map(str, temp))
-    print(r_48)
-    return 0
+    # print(len(k), " ", len(r_48))
+    xor_list = []
+    # 进行异或操作
+    for i in range(48):
+        if r_48[i] == k[i]:
+            xor_list.append('0')
+        else:
+            xor_list.append('1')
+    xor_result = ''.join(xor_list)
+    # print(xor_result)
+    # 使用异或结果进行S盒替换
+    return xor_result
+
+
+# S盒替换
+def S_box_substitution(xor_result):
+
+    return
 
 
 # r扩展到48位，用于执行Feistel函数
@@ -163,6 +189,7 @@ def expand_r(r):
 
 
 # PC-1置换
+# 返回的是56bit数据，删除了每字节最后一位奇偶校验位
 def permuted_choice_1(key):
     if len(key) != 64:
         return
@@ -179,11 +206,32 @@ def permuted_choice_1(key):
     return pc_1_key
 
 
+# PC-2置换
+# 返回的48bit数据
+def permuted_choice_2(c, d):
+    child_key = c+d
+    pc2_table = [
+                14, 17, 11, 24, 1, 5,
+                3, 28, 15, 6, 21, 10,
+                23, 19, 12, 4, 26, 8,
+                16, 7, 27, 20, 13, 2,
+                41, 52, 31, 37, 47, 55,
+                30, 40, 51, 45, 33, 48,
+                44, 49, 39, 56, 34, 53,
+                46, 42, 50, 36, 29, 32
+                 ]
+    pc_2_list = []
+    for i in pc2_table:
+        pc_2_list.append(child_key[i - 1])
+    pc_2_key = ''.join(pc_2_list)
+    return pc_2_key
+
+
 def __main__():
     key = generate_key()
     print("密钥为：", key)
     # 分为8字节一组（64bit）
-    print("PC1置换后密钥为：", permuted_choice_1(key))
+    # print("PC1置换后密钥为：", permuted_choice_1(key))
     data_slides = divide_data("abcdefghijklmnopqrstuvwxyz", 8)
     for data in data_slides:
         binary_data = string_to_binary(data)
