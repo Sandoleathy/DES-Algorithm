@@ -122,20 +122,20 @@ def divide_data(data, bits):
 
 # --------------------------------------------------------------------------------
 # 将明文字符串转换为二进制码
-def string_to_binary(s):
-    # 将字符串的每个字符转换为对应的二进制表示
-    return ''.join(format(ord(char), '08b') for char in s)
+# 使用utf-8编码兼容中文
+def utf8_string_to_binary(string):
+    # 将字符串编码为UTF-8字节序列
+    utf8_bytes = string.encode('utf-8')
+    # 将每个字节转换为8位的二进制格式并拼接
+    binary_result = ''.join(format(byte, '08b') for byte in utf8_bytes)
+    return binary_result
 
 
-# 将二进制码转换回明文字符串
-def binary_to_string(binary_str):
-    # 每8位一组，将二进制字符串切分
-    chars = [binary_str[i:i + 8] for i in range(0, len(binary_str), 8)]
-
-    # 将每组二进制转换为字符
-    return ''.join([chr(int(char, 2)) for char in chars])
-
-
+def binary_to_utf8_string(binary_string):
+    # 将二进制字符串按8位分割为字节，转换为整数并生成字节数组
+    byte_array = bytearray(int(binary_string[i:i+8], 2) for i in range(0, len(binary_string), 8))
+    # 使用UTF-8解码为字符串
+    return byte_array.decode('utf-8')
 # --------------------------------------------------------------------------------
 
 
@@ -170,27 +170,12 @@ def encryption_cycle(text, key):
     # 初始情况下直接分为左右两组
     l = group[0]
     r = group[1]
-    # 对密钥进行pc-1替换
-    pc_1_key = permuted_choice_1(key)
-    # 切分成28bit一部分
-    c = pc_1_key[:28]
-    d = pc_1_key[28:]
+    child_key_list = generate_all_child_key(key)
 
     # 16轮迭代
     for i in range(16):
         temp_r = r  # r的副本，下一个轮次的l = 本轮次r
-        # 每轮子密钥k生成
-        if i + 1 == 1 or i + 1 == 2 or i + 1 == 9 or i + 1 == 16:
-            # 循环左移一位
-            c = c[1:] + c[:1]
-            d = d[1:] + d[:1]
-            # print("循环左移一位，结果为c: ", c, ' ,d: ', d)
-        else:
-            # 循环左移两位
-            c = c[2:] + c[:2]
-            d = d[2:] + d[:2]
-            # print("循环左移两位，结果为c: ", c, ' ,d: ', d)
-        child_key = permuted_choice_2(c, d)
+        child_key = child_key_list[i]
         f_result = F_function(r, child_key)
         # f函数的结果与l进行异或得到下一轮的r
         next_r = ''
@@ -221,7 +206,7 @@ def generate_all_child_key(key):
     # 切分成28bit一部分
     c = pc_1_key[:28]
     d = pc_1_key[28:]
-    key_list =[]
+    key_list = []
     for i in range(16):
         # 每轮子密钥k生成
         if i + 1 == 1 or i + 1 == 2 or i + 1 == 9 or i + 1 == 16:
@@ -237,6 +222,7 @@ def generate_all_child_key(key):
         child_key = permuted_choice_2(c, d)
         key_list.append(child_key)
     return key_list
+
 
 # F函数
 # 接收48位的子密钥和32位的R
@@ -377,7 +363,7 @@ def binary_to_hex(binary_string):
 # 加密主函数
 # 接受明文和密钥，返回加密后的二进制数据
 def encryption(plaintext, key):
-    plaintext_binary = string_to_binary(plaintext)
+    plaintext_binary = utf8_string_to_binary(plaintext)
     data_slides = divide_data(plaintext_binary, 64)
     # print(data_slides)
     encryption_result = ''
@@ -389,13 +375,48 @@ def encryption(plaintext, key):
 
 
 # 破译主函数
-# 接收密文和密钥，返回明文
+# 接收密文(二进制形式)和密钥，返回明文
 def deciphering(ciphertext, key):
-    ciphertext_binary = string_to_binary(ciphertext)
-    data_slides = divide_data(ciphertext_binary, 64)
+    data_slides = divide_data(ciphertext, 64)
     cipher_result = ''
     for data in data_slides:
         ip_data = initial_permutation(data)
+        decipher_data = cipher_cycle(ip_data, key)
+        cipher_result += decipher_data
+    return cipher_result
+
+
+def cipher_cycle(ciphertext, key):
+    # 分成两组，每组32bit
+    group = divide_data(ciphertext, 32)
+    # 初始情况下直接分为左右两组
+    l = group[0]
+    r = group[1]
+    child_key_list = generate_all_child_key(key)
+    # 16轮迭代
+    for i in range(16):
+        temp_r = r  # r的副本，下一个轮次的l = 本轮次r
+        child_key = child_key_list[15-i]
+        f_result = F_function(r, child_key)
+        # f函数的结果与l进行异或得到下一轮的r
+        next_r = ''
+        for j in range(len(f_result)):
+            if f_result[j] == l[j]:
+                next_r += '0'
+            else:
+                next_r += '1'
+        # li = r(i-1)
+        l = temp_r
+        # r
+        r = next_r
+    print("破译的16轮迭代结束")
+    # 迭代结束后，交换l和r
+    temp_l = l
+    l = r
+    r = temp_l
+    # 最后一步将l和r结合进行逆初始置换
+    deciphering_result = inverse_permutation(l + r)
+    return deciphering_result
 
 
 def __main__():
@@ -406,6 +427,13 @@ def __main__():
     plaintext = "你好，我是丁真,芝士雪豹，妈妈生的"
     en_result = encryption(plaintext, key)
     print(binary_to_hex(en_result))
+
+    print("解码")
+    ciphertext = en_result
+    cipher_result = deciphering(ciphertext, key)
+    print(cipher_result)
+    print(utf8_string_to_binary(plaintext))
+    print(binary_to_utf8_string(cipher_result))
 
 
 __main__()
