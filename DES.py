@@ -136,6 +136,23 @@ def binary_to_utf8_string(binary_string):
     byte_array = bytearray(int(binary_string[i:i+8], 2) for i in range(0, len(binary_string), 8))
     # 使用UTF-8解码为字符串
     return byte_array.decode('utf-8')
+
+
+def binary_to_hex(binary_string):
+    # 先将二进制字符串转换为十进制整数
+    decimal_value = int(binary_string, 2)
+    # 再将十进制整数转换为十六进制，并去掉前缀 "0x"
+    hex_value = hex(decimal_value)[2:]
+    return hex_value
+
+
+def hex_to_binary(hex_string):
+    # 先将十六进制字符串转换为十进制整数
+    decimal_value = int(hex_string, 16)
+    # 再将十进制整数转换为二进制字符串，并去掉前缀 "0b"
+    binary_value = bin(decimal_value)[2:]
+    return binary_value
+
 # --------------------------------------------------------------------------------
 
 
@@ -350,14 +367,6 @@ def permuted_choice_2(c, d):
         pc_2_list.append(child_key[i - 1])
     pc_2_key = ''.join(pc_2_list)
     return pc_2_key
-
-
-def binary_to_hex(binary_string):
-    # 先将二进制字符串转换为十进制整数
-    decimal_value = int(binary_string, 2)
-    # 再将十进制整数转换为十六进制，并去掉前缀 "0x"
-    hex_value = hex(decimal_value)[2:]
-    return hex_value
 
 
 # 加密主函数
