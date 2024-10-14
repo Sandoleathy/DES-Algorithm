@@ -146,12 +146,12 @@ def binary_to_hex(binary_string):
     return hex_value
 
 
-def hex_to_binary(hex_string):
+def hex_to_binary_64(hex_string):
     # 先将十六进制字符串转换为十进制整数
     decimal_value = int(hex_string, 16)
     # 再将十进制整数转换为二进制字符串，并去掉前缀 "0b"
     binary_value = bin(decimal_value)[2:]
-    return binary_value
+    return binary_value.zfill(64)
 
 # --------------------------------------------------------------------------------
 
@@ -220,6 +220,7 @@ def encryption_cycle(text, key):
 def generate_all_child_key(key):
     # 对密钥进行pc-1替换
     pc_1_key = permuted_choice_1(key)
+    print(pc_1_key)
     # 切分成28bit一部分
     c = pc_1_key[:28]
     d = pc_1_key[28:]
@@ -372,6 +373,7 @@ def permuted_choice_2(c, d):
 # 加密主函数
 # 接受明文和密钥，返回加密后的二进制数据
 def encryption(plaintext, key):
+    # print(len(key))
     plaintext_binary = utf8_string_to_binary(plaintext)
     data_slides = divide_data(plaintext_binary, 64)
     # print(data_slides)
@@ -445,4 +447,4 @@ def __main__():
     print(binary_to_utf8_string(cipher_result))
 
 
-__main__()
+# __main__()
